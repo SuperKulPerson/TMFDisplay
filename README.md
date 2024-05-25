@@ -4,11 +4,11 @@ TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://githu
 [demo.webm](https://github.com/SuperKulPerson/TMFDisplay/assets/153872437/e95b7e3b-e1dc-43ab-a8c3-915ea6a45c0e)
 
 ## Requirements
-- Windows
+- Windows.
 - Python 3.8 or newer.
 
 ## Install
-- In OBS `Tools` > `Scripts` > `Python Settings` set your Python folder. The directory should look something like this `C:/Users/User/AppData/Local/Programs/Python/Python312`
+- In OBS, `Tools` > `Scripts` > `Python Settings` set your Python folder. The directory should look something like this: `C:/Users/User/AppData/Local/Programs/Python/Python312`
 - Download the latest script, press the + button in `Tools` > `Scripts`, move the script there and load it.
 
 ## Usage
