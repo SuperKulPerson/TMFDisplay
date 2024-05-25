@@ -1,5 +1,5 @@
 # TMFDisplay
-TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://github.com/obsproject/obs-studio) that reads the memory of Trackmania Nations/United Forever and displays to a text source.
+TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://github.com/obsproject/obs-studio) that reads the memory of Trackmania Nations/United Forever and displays it to a text source.
 
 [demo.webm](https://github.com/SuperKulPerson/TMFDisplay/assets/153872437/e95b7e3b-e1dc-43ab-a8c3-915ea6a45c0e)
 
