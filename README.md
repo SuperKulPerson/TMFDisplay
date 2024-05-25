@@ -8,7 +8,7 @@ TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://githu
 - Python 3.8 or newer.
 
 ## Install
-- In OBS, `Tools` > `Scripts` > `Python Settings`, set Python folder.
+- In OBS `Tools` > `Scripts` > `Python Settings` set your Python folder. It should look something like this `C:/Users/User/AppData/Local/Programs/Python/Python312`
 - Download the latest script, press the + button in `Tools` > `Scripts`, move the script there and load it.
 
 ## Usage
