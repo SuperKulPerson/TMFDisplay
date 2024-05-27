@@ -1,8 +1,11 @@
 '''
-Version: 1.1 / 25.05.2024
+Version: 1.2 / 27.05.2024
 Minimum Python version: 3.8
 Discord: tractorfan
-Github: https://github.com/SuperKulPerson/TMFDisplay
+GitHub: https://github.com/SuperKulPerson/TMFDisplay
+
+Version 1.1 > 1.2 / 27.05.2024
+Added simple version checking
 
 Version 1.0 > 1.1 / 25.05.2024
 Small button text change
@@ -36,6 +39,9 @@ Optimized average frame render time by only updating display when the checkpoint
 
 import obspython as obs
 import ctypes
+import http.client
+import json
+from datetime import datetime
 
 def get_pid(process_name):
     # Create a buffer to hold process information
@@ -94,12 +100,60 @@ def get_final_addresses(base_address, offsets, alt):
 #----------------------------------------------------------------------------------------------#
 
 #Initializing Variables
-autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
+latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
+version = "v1.2"
+date = "27.05.2024"
 update_rate = 10
-displayed_checkpoint_time = 0
+displayed_checkpoint_time = new_update = 0
 process_name = "TmForever.exe"
 address_offsets_data = address_offsets()
 final_addresses = []
+
+def get_latest():
+    conn = http.client.HTTPSConnection("api.github.com")
+    endpoint = f"/repos/SuperKulPerson/TMFDisplay/releases/latest"
+    
+    conn.request("GET", endpoint, headers={"User-Agent": "Python-Client"})
+    response = conn.getresponse()
+    
+    if response.status == 200:
+        data = response.read().decode()
+        release = json.loads(data)
+        release_tag = release['tag_name']
+        release_date = release['published_at']
+        release_page = release['html_url']
+        release_assets = release['assets']
+        release_direct = [asset['browser_download_url'] for asset in release_assets][0]
+        return release_tag, release_date, release_direct, release_page
+    
+    print("Get latest version failed")
+    return None, None, None, None
+
+def format_date(iso_date_str):
+    dt = datetime.strptime(iso_date_str, "%Y-%m-%dT%H:%M:%SZ")
+    return dt.strftime("%d.%m.%Y")
+
+def check_version():
+    global versionstatus, new_update, latest_direct, latest_version_date, latest_page
+    
+    latest_version, latest_date, latest_direct, latest_page = get_latest()
+    
+    version_date = version + " / " + date
+    
+    if latest_version and latest_date:
+        latest_date = format_date(latest_date)
+        latest_version_date = latest_version + " / " + latest_date
+    
+        if version != latest_version:
+            new_update = 3
+            versionstatus = f"<font color=#ff8800><b>New version available: {latest_version_date}</b></font>"
+        else:
+            new_update = 2
+            versionstatus = f"<font color=#55ff55><b>On latest version: {version_date}</b></font>"
+        return
+    new_update = 1
+    versionstatus = f"<font color=#ff5555><b>Could not get the latest version.</b></font>"
+    return
 
 def display(sourcename, displayvalue): #Displays text to a text source. Possible optimization: For timers, reducing the source and data creation/release amount to only once can save about 10% on frame render times.
     if not sourcename or not displayvalue:
@@ -237,7 +291,7 @@ def setup(*args): #Get PID > Alt client check > In-Game check > Get final addres
         if setupstage != 1:
             print(setupinfo)
             setupstage = 1
-        setupinfo = "<font color=#ff8000><b>" + setupinfo + "</b></font>"
+        setupinfo = "<font color=#ff8800><b>" + setupinfo + "</b></font>"
         return
     
     ingame_address = 0xD77B4C #Address: Base + 0x977B4C
@@ -266,7 +320,7 @@ def setup(*args): #Get PID > Alt client check > In-Game check > Get final addres
         if setupstage != 2:
             setupinfo = "Load any map to finish the setup."
             print(setupinfo)
-            setupinfo = "<font color=#ff8000><b>" + setupinfo + "</b></font>"
+            setupinfo = "<font color=#ff8800><b>" + setupinfo + "</b></font>"
             setupstage = 2
         return
 
@@ -306,12 +360,20 @@ def script_defaults(settings):
     obs.obs_data_set_string(settings, "sourcecptime", "No Source")
     obs.obs_data_set_string(settings, "prefixcptime", "CP Time: ") 
 
+def button_check_version(props, prop, *settings):
+    global prevent_first_load, new_update
+    if prevent_first_load:
+        check_version()
+    
+    options_update(props, None, settingscopy)
+    return True
+
 def button_save_settings(props, prop, *settings):
     global prevent_first_load, settingscopy
     if prevent_first_load:
         filtered_settings = obs.obs_data_create()
         
-        exclude = ["statussetup", "statuscp", "statuscptime", "examplesourcecp", "examplecp", "examplesourcecptime", "examplecptime", "setup_altclient", "setup_status", "setup_currentpid", "options", "setup_setpid", "setup_manualpid"]
+        exclude = ["statussetup", "statuscp", "statuscptime", "examplesourcecp", "examplecp", "examplesourcecptime", "examplecptime", "setup_altclient", "setup_status", "setup_currentpid", "options", "setup_setpid", "setup_manualpid", "setting_version"]
         
         obs.obs_data_apply(filtered_settings, settingscopy)
         for name in exclude:
@@ -354,7 +416,7 @@ def button_start_setup(props, prop, *settings):
     return True
 
 def options_update(props, prop, *settings):
-    global autosave, pre_prevent_first_load, prevent_first_load, sourcecp, prefixcp, seperatorcp, enabledcp, setupinfo, setupstage, pid, manualpid, alt, setuptimer, enabledcptime, sourcecptime, cp0timedisplay, prefixcptime, update_rate
+    global latest_page, latest_direct, new_update, versionstatus, autosave, pre_prevent_first_load, prevent_first_load, sourcecp, prefixcp, seperatorcp, enabledcp, setupinfo, setupstage, pid, manualpid, alt, setuptimer, enabledcptime, sourcecptime, cp0timedisplay, prefixcptime, update_rate
     
     s_option = obs.obs_data_get_string(settingscopy, "options")
     s_sourcecp = obs.obs_data_get_string(settingscopy, "sourcecp")
@@ -395,16 +457,21 @@ def options_update(props, prop, *settings):
     property_list.append(p_setting_save_settings := obs.obs_properties_get(props, "setting_save_settings"))
     property_list.append(p_setting_load_settings := obs.obs_properties_get(props, "setting_load_settings"))
     property_list.append(p_setting_autosave := obs.obs_properties_get(props, "setting_autosave"))
+    property_list.append(p_setting_check_version := obs.obs_properties_get(props, "setting_check_version"))
+    property_list.append(p_setting_version := obs.obs_properties_get(props, "setting_version"))
+    property_list.append(p_setting_download_direct := obs.obs_properties_get(props, "setting_download_direct"))
+    property_list.append(p_setting_download_page := obs.obs_properties_get(props, "setting_download_page"))
     
     
     #-Status-#
-    status_disabled = "<font color=#ff8000><b>Disabled</b></font>"
+    status_disabled = "<font color=#ff8800><b>Disabled</b></font>"
     status_enabled = "<font color=#55ff55><b>Enabled</b></font>"
     status_enabled_nosource = "<font color=#ff5555><b>Enabled, NO SOURCE.</b></font>"
     
     obs.obs_data_set_string(settingscopy, "statussetup", setupinfo)
     obs.obs_data_set_string(settingscopy, "statuscp", status_disabled)
     obs.obs_data_set_string(settingscopy, "statuscptime", status_disabled)
+    
     if s_sourcecp == "No Source" or not s_sourcecp:
         if enabledcp:
             obs.obs_data_set_string(settingscopy, "statuscp", status_enabled_nosource)
@@ -416,7 +483,9 @@ def options_update(props, prop, *settings):
             obs.obs_data_set_string(settingscopy, "statuscptime", status_enabled_nosource)
     else:
         if enabledcptime:
-            obs.obs_data_set_string(settingscopy, "statuscptime", status_enabled) 
+            obs.obs_data_set_string(settingscopy, "statuscptime", status_enabled)
+    
+    
     #-Status End-#
     
     #-Checkpoint Counter-#
@@ -452,12 +521,14 @@ def options_update(props, prop, *settings):
     if pid:
         obs.obs_data_set_string(settingscopy, "setup_currentpid", str(pid))
     else:
-        obs.obs_data_set_string(settingscopy, "setup_currentpid", "<font color=#ff8000><b>None</b></font>")
+        obs.obs_data_set_string(settingscopy, "setup_currentpid", "<font color=#ff8800><b>None</b></font>")
     #-Setup End-#
     
     #-Settings-#
     update_rate = obs.obs_data_get_int(settingscopy, "setting_update_rate")
     autosave = obs.obs_data_get_bool(settingscopy, "setting_autosave")
+    obs.obs_data_set_string(settingscopy, "setting_version", versionstatus)
+    
     #-Settings End-#
     
     for p_name in property_list:
@@ -495,12 +566,7 @@ def options_update(props, prop, *settings):
         if manualpid:
             obs.obs_property_set_visible(p_setup_setpid, True)
             obs.obs_property_set_visible(p_setup_setpidbutton, True)
-        else:
-            obs.obs_property_set_visible(p_setup_setpid, False)
-            obs.obs_property_set_visible(p_setup_setpidbutton, False)
-        if setupstage != 3:
-            obs.obs_property_set_visible(p_setup_start, False)
-        else:
+        if setupstage == 3:
             obs.obs_property_set_visible(p_setup_start, True)
         
     elif s_option == "Settings":
@@ -508,7 +574,14 @@ def options_update(props, prop, *settings):
         obs.obs_property_set_visible(p_setting_save_settings, True)
         obs.obs_property_set_visible(p_setting_load_settings, True)
         obs.obs_property_set_visible(p_setting_autosave, True)
-        
+        obs.obs_property_set_visible(p_setting_check_version, True)
+        if new_update >= 1:
+            obs.obs_property_set_visible(p_setting_version, True)
+        if new_update == 3:
+            obs.obs_property_set_visible(p_setting_download_direct, True)
+            obs.obs_property_button_set_url(p_setting_download_direct, latest_direct)
+            obs.obs_property_set_visible(p_setting_download_page, True)
+            obs.obs_property_button_set_url(p_setting_download_page, latest_page)
     
     if prop == 10 and pre_prevent_first_load: #Scuffed way of preventing setup() from being called multiple times at script start.
         prevent_first_load = True
@@ -543,6 +616,8 @@ def script_properties():
     p = obs.obs_properties_add_text(props, "statussetup", "Setup:", obs.OBS_TEXT_INFO)
     p = obs.obs_properties_add_text(props, "statuscp", "Checkpoint Counter:", obs.OBS_TEXT_INFO)
     p = obs.obs_properties_add_text(props, "statuscptime", "Checkpoint Timer:", obs.OBS_TEXT_INFO)
+    
+    
     #-Status End-#
     
     #-Checkpoint Counter-#
@@ -611,6 +686,14 @@ def script_properties():
     obs.obs_property_set_modified_callback(p, button_load_settings)
     p = obs.obs_properties_add_bool(props, "setting_autosave", "Autosave to \"MainSettings.json\" on exit")
     obs.obs_property_set_modified_callback(p, options_update)
+    p = obs.obs_properties_add_button(props, "setting_check_version", "Check for update", button)
+    obs.obs_property_set_modified_callback(p, button_check_version)
+    p = obs.obs_properties_add_text(props, "setting_version", "Version:", obs.OBS_TEXT_INFO)
+    p = obs.obs_properties_add_button(props, "setting_download_direct", "Direct download", button)
+    obs.obs_property_button_set_type(p, obs.OBS_BUTTON_URL)
+    p = obs.obs_properties_add_button(props, "setting_download_page", "Download page", button)
+    obs.obs_property_button_set_type(p, obs.OBS_BUTTON_URL)
+    
     #-Settings End-#
     
     global settingscopy, pre_prevent_first_load
@@ -623,4 +706,4 @@ def button():
     return
 
 def script_description():
-    return "Version: 1.1 / 25.05.2024"
+    return "<font><b>" + version + " / " + date + "</b></font>"
