@@ -1,8 +1,12 @@
 '''
-Version: 1.2 / 27.05.2024
+Version: 1.3 / 27.05.2024
 Minimum Python version: 3.8
 Discord: tractorfan
 GitHub: https://github.com/SuperKulPerson/TMFDisplay
+
+Version 1.2 > 1.3 / 27.05.2024
+Added auto loading settings
+Removed load settings button from status
 
 Version 1.1 > 1.2 / 27.05.2024
 Added simple version checking
@@ -100,8 +104,8 @@ def get_final_addresses(base_address, offsets, alt):
 #----------------------------------------------------------------------------------------------#
 
 #Initializing Variables
-latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
-version = "v1.2"
+autoload = latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
+version = "v1.3"
 date = "27.05.2024"
 update_rate = 10
 displayed_checkpoint_time = new_update = 0
@@ -333,6 +337,15 @@ def script_load(settings):
     
     global settingscopy
     settingscopy = settings
+    
+    global autoload
+    settings_autoload = obs.obs_data_create_from_json_file(script_path() + "/MainSettings.json")
+    if settings_autoload:
+        autoload = obs.obs_data_get_bool(settings_autoload, "setting_autoload")
+        if autoload:
+            print("Autoloaded")
+            obs.obs_data_apply(settingscopy, settings_autoload)
+            options_update(None, None, settingscopy)
 
 def script_unload():
     global prevent_first_load, pre_prevent_first_load, autosave, settingscopy, setuptimer
@@ -352,6 +365,7 @@ def script_defaults(settings):
     obs.obs_data_set_bool(settings, "enabledcp", False)
     obs.obs_data_set_bool(settings, "enabledcptime", False)
     obs.obs_data_set_bool(settings, "setting_autosave", False)
+    obs.obs_data_set_bool(settings, "setting_autoload", False)
     obs.obs_data_set_string(settings, "cp0timedisplay", "")
     obs.obs_data_set_string(settings, "options", "Status")
     obs.obs_data_set_string(settings, "sourcecp", "No Source")
@@ -424,7 +438,6 @@ def options_update(props, prop, *settings):
     
     property_list = []
     
-    property_list.append(p_status_load_settings := obs.obs_properties_get(props, "status_load_settings"))
     property_list.append(p_statusrefresh := obs.obs_properties_get(props, "statusrefresh"))
     property_list.append(p_statussetup := obs.obs_properties_get(props, "statussetup"))
     property_list.append(p_statuscp := obs.obs_properties_get(props, "statuscp"))
@@ -457,6 +470,7 @@ def options_update(props, prop, *settings):
     property_list.append(p_setting_save_settings := obs.obs_properties_get(props, "setting_save_settings"))
     property_list.append(p_setting_load_settings := obs.obs_properties_get(props, "setting_load_settings"))
     property_list.append(p_setting_autosave := obs.obs_properties_get(props, "setting_autosave"))
+    property_list.append(p_setting_autoload := obs.obs_properties_get(props, "setting_autoload"))
     property_list.append(p_setting_check_version := obs.obs_properties_get(props, "setting_check_version"))
     property_list.append(p_setting_version := obs.obs_properties_get(props, "setting_version"))
     property_list.append(p_setting_download_direct := obs.obs_properties_get(props, "setting_download_direct"))
@@ -527,6 +541,7 @@ def options_update(props, prop, *settings):
     #-Settings-#
     update_rate = obs.obs_data_get_int(settingscopy, "setting_update_rate")
     autosave = obs.obs_data_get_bool(settingscopy, "setting_autosave")
+    autoload = obs.obs_data_get_bool(settingscopy, "setting_autoload")
     obs.obs_data_set_string(settingscopy, "setting_version", versionstatus)
     
     #-Settings End-#
@@ -536,7 +551,6 @@ def options_update(props, prop, *settings):
     
     if s_option == "Status":
         obs.obs_property_set_visible(p_statusrefresh, True)
-        obs.obs_property_set_visible(p_status_load_settings, True)
         obs.obs_property_set_visible(p_statussetup, True)
         obs.obs_property_set_visible(p_statuscp, True)
         obs.obs_property_set_visible(p_statuscptime, True)
@@ -574,6 +588,7 @@ def options_update(props, prop, *settings):
         obs.obs_property_set_visible(p_setting_save_settings, True)
         obs.obs_property_set_visible(p_setting_load_settings, True)
         obs.obs_property_set_visible(p_setting_autosave, True)
+        obs.obs_property_set_visible(p_setting_autoload, True)
         obs.obs_property_set_visible(p_setting_check_version, True)
         if new_update >= 1:
             obs.obs_property_set_visible(p_setting_version, True)
@@ -609,8 +624,6 @@ def script_properties():
         obs.source_list_release(sources)
     
     #-Status-#
-    p = obs.obs_properties_add_button(props, "status_load_settings", "Load from \"MainSettings.json\"", button)
-    obs.obs_property_set_modified_callback(p, button_load_settings)
     p = obs.obs_properties_add_button(props, "statusrefresh", "Refresh Status", button)
     obs.obs_property_set_modified_callback(p, options_update)
     p = obs.obs_properties_add_text(props, "statussetup", "Setup:", obs.OBS_TEXT_INFO)
@@ -685,6 +698,8 @@ def script_properties():
     p = obs.obs_properties_add_button(props, "setting_load_settings", "Load from \"MainSettings.json\"", button)
     obs.obs_property_set_modified_callback(p, button_load_settings)
     p = obs.obs_properties_add_bool(props, "setting_autosave", "Autosave to \"MainSettings.json\" on exit")
+    obs.obs_property_set_modified_callback(p, options_update)
+    p = obs.obs_properties_add_bool(props, "setting_autoload", "Autoload \"MainSettings.json\" on script load")
     obs.obs_property_set_modified_callback(p, options_update)
     p = obs.obs_properties_add_button(props, "setting_check_version", "Check for update", button)
     obs.obs_property_set_modified_callback(p, button_check_version)
