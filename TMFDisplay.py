@@ -13,8 +13,8 @@ Performance issues? Try these tips:
 Version 1.3 > 2.0 / 09.06.2024
 Added Gear and RPM display.
 Added Respawn Counter.
-Added Server Timer. Shows the timer of the server even while the HUD is off.**
-Added FPS Counter. Shows the FPS counter without having to open the debug menu.**
+Added Server Timer. Shows the timer of the server even while the HUD is off.
+Added FPS Counter. Shows the FPS counter without having to open the debug menu.
 Added Timer formatting.
 Checkpoint Timer now works while HUD is off.
 Hopefully better online support. (Not fully tested)
