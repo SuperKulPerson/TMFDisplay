@@ -5,8 +5,8 @@ Discord: tractorfan
 GitHub: https://github.com/SuperKulPerson/TMFDisplay
 
 Performance issues? Try these tips:
--Change formatting of the Checkpoint Timer.
--Disable antialising in your text sources.
+-Change the formatting of the Checkpoint Timer.
+-Disable antialiasing in your text sources.
 -Change the font size in your text sources to something lower.
 -Change the update rate to something less frequent.
 
@@ -15,13 +15,13 @@ Added Gear and RPM display.
 Added Respawn Counter.
 Added Server Timer. Shows the timer of the server even while the HUD is off.**
 Added FPS Counter. Shows the FPS counter without having to open the debug menu.**
-Added Timer formating.
+Added Timer formatting.
 Checkpoint Timer now works while HUD is off.
 Hopefully better online support. (Not fully tested)
-Added setting to toggle any display to sources off while spectating or in menu.
+Added setting to toggle any display to sources off while spectating or the in menu.
 Improved alt client detection.
 Setup will now restart after finishing or spectating and when exiting a map.
-Fixed Checkpoint Counter not updating display on prefix/seperator change.
+Fixed Checkpoint Counter not updating display on prefix/separator change.
 And more!
 
 Version 1.2 > 1.3 / 27.05.2024
