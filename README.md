@@ -28,5 +28,3 @@ TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://githu
 
 ## Future
 The next big version (3.0) will most likely be a rewrite. The current script is an unplanned mess, which makes it difficult to add new features. I will still do bugfixes and add some additions if there is any demand.
-
-MAY FAIL TO WORK WITH TMLOADER. WILL FIX!!
