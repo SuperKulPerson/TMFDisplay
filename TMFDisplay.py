@@ -1,5 +1,5 @@
 '''
-Version: 2.0 / 09.06.2024
+Version: 2.1 / 27.06.2024
 Minimum Python version: 3.8
 Discord: tractorfan
 GitHub: https://github.com/SuperKulPerson/TMFDisplay
@@ -10,7 +10,7 @@ Performance issues? Try these tips:
 -Change the font size in your text sources to something lower.
 -Change the update rate to something less frequent.
 
-Version 2.0 > 2.1 / 26.06.2024
+Version 2.0 > 2.1 / 27.06.2024
 Fixed compatibility with TMLoader.
 
 Version 1.3 > 2.0 / 09.06.2024
@@ -185,7 +185,7 @@ def get_final_addresses(base_address, offset_address, offsets, alt):
 #Initialize Variables
 tmloader = serverhudservertimer = displayed_server_time = displayed_sourceservertime = displayed_fps = displayed_sourcefps = enabledservertimer = sourceservertimer = prefixservertimer = formatservertimer = enabledfps = sourcefps = prefixfps = current_setup_rate = prefixgear = prefixrpm = sourcerpm = sourcegear = displayed_sourcerpm = displayed_rpm = displayed_gear = displayed_sourcegear = enabledrpm = enabledgear = serverhudcp = displayed_respawns = enabledrespawns = sourcerespawns = prefixrespawns = displayed_sourcerespawns = disabled_displays = display_toggle = spectator = formatcptime = hudcptime = autoload = latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime_cptime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
 version = "v2.1"
-date = "26.06.2024"
+date = "27.06.2024"
 update_rate = 10
 setup_rate = 500
 displayed_checkpoint_time = new_update = 0
