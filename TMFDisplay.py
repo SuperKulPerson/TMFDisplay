@@ -10,6 +10,9 @@ Performance issues? Try these tips:
 -Change the font size in your text sources to something lower.
 -Change the update rate to something less frequent.
 
+Version 2.0 > 2.1 / 26.06.2024
+Fixed compatibility with TMLoader.
+
 Version 1.3 > 2.0 / 09.06.2024
 Added Gear and RPM display.
 Added Respawn Counter.
@@ -63,6 +66,7 @@ Optimized average frame render time by only updating display when the checkpoint
 
 import obspython as obs
 import ctypes
+import ctypes.wintypes
 import http.client
 import json
 from datetime import datetime
@@ -90,23 +94,65 @@ def get_pid(process_name):
 			ctypes.windll.kernel32.CloseHandle(process_handle)
 	return None
 
+def get_base_address(pid):
+	# Define necessary constants
+	TH32CS_SNAPMODULE = 0x00000008
+	
+	# Define necessary structures
+	class MODULEENTRY32(ctypes.Structure):
+		_fields_ = [
+			("dwSize", ctypes.wintypes.DWORD),
+			("th32ModuleID", ctypes.wintypes.DWORD),
+			("th32ProcessID", ctypes.wintypes.DWORD),
+			("GlblcntUsage", ctypes.wintypes.DWORD),
+			("ProccntUsage", ctypes.wintypes.DWORD),
+			("modBaseAddr", ctypes.wintypes.LPVOID),
+			("modBaseSize", ctypes.wintypes.DWORD),
+			("hModule", ctypes.wintypes.HMODULE),
+			("szModule", ctypes.c_char * 256),
+			("szExePath", ctypes.c_char * 260),
+		]
+
+	# Create snapshot of all processes and modules
+	snapshot = ctypes.windll.kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, pid)
+	
+	if snapshot == -1:
+		print(f"Failed to create snapshot of processes for PID {pid}.")
+		return None
+
+	# Find the main module (executable) of the specified process
+	me32 = MODULEENTRY32()
+	me32.dwSize = ctypes.sizeof(MODULEENTRY32)
+
+	if not ctypes.windll.kernel32.Module32First(snapshot, ctypes.byref(me32)):
+		ctypes.windll.kernel32.CloseHandle(snapshot)
+		print(f"Failed to find base address for process with PID {pid}.")
+		return None
+
+	base_address = me32.modBaseAddr
+	
+	# Close the snapshot handle
+	ctypes.windll.kernel32.CloseHandle(snapshot)
+
+	return base_address
+
 def address_offsets(data):
 	main_data = {}
-	main_data['mstime'] = 0xD560CC, [0x0, 0x1C, 0x2B0] # In-game timer in ms. [0]
-	main_data['checkpoint'] = 0xD560CC, [0x0, 0x1C, 0x334] # Current checkpoint number.
-	main_data['maxcp'] = 0xD560CC, [0x0, 0x1C, 0x2F8] # Max checkpoint.
-	main_data['cptime'] = 0xD68C44, [0x12C, 0x244, 0x0, 0x2FC, 0x0] # Cptime of cp1. Add 0x8 for each cp to get the cptime of all cps.
-	main_data['finish'] = 0xD560CC, [0x0, 0x1C, 0x33C] # 0 = Not finished. 1 = Finished. [4]
-	main_data['spectator'] = 0xD67524, None # Checks if in spectator mode on a server. 200 = Playing. 500 = Spectating.
-	main_data['respawns'] = 0xD68C44, [0x454, 0x340] # Counts respawns above 999. Misscounts when resetting a run, but fixes itself after the run has started.
-	main_data['hud'] = 0xD68C44, [0x454, 0x518, 0x18] # 0 = HUD Off. 1 = HUD On.
-	main_data['gear'] = 0xD560CC, [0x4, 0x5C8] # 0 = Backwards gear. Goes up to 5. [8]
-	main_data['rpm'] = 0xD560CC, [0x4, 0x5B8] # RPM of the car. Does not work on TMOriginal envis (Probably cus they don't have rpm).
-	main_data['fps'] = 0xD68C44, [0x454, 0x278] #FPS Counter. Works without toggling the fps counter in-game
-	main_data['servertimer'] = 0xD68C44, [0x454, 0x518, 0xC8] # Current time on server. Shows 0 if no server timer or offline.
+	main_data['mstime'] = 0x9560CC, [0x0, 0x1C, 0x2B0] # In-game timer in ms. [0]
+	main_data['checkpoint'] = 0x9560CC, [0x0, 0x1C, 0x334] # Current checkpoint number.
+	main_data['maxcp'] = 0x9560CC, [0x0, 0x1C, 0x2F8] # Max checkpoint.
+	main_data['cptime'] = 0x968C44, [0x12C, 0x244, 0x0, 0x2FC, 0x0] # Cptime of cp1. Add 0x8 for each cp to get the cptime of all cps.
+	main_data['finish'] = 0x9560CC, [0x0, 0x1C, 0x33C] # 0 = Not finished. 1 = Finished. [4]
+	main_data['spectator'] = 0x967524, None # Checks if in spectator mode on a server. 200 = Playing. 500 = Spectating.
+	main_data['respawns'] = 0x968C44, [0x454, 0x340] # Counts respawns above 999. Misscounts when resetting a run, but fixes itself after the run has started.
+	main_data['hud'] = 0x968C44, [0x454, 0x518, 0x18] # 0 = HUD Off. 1 = HUD On.
+	main_data['gear'] = 0x9560CC, [0x4, 0x5C8] # 0 = Backwards gear. Goes up to 5. [8]
+	main_data['rpm'] = 0x9560CC, [0x4, 0x5B8] # RPM of the car. Does not work on TMOriginal envis (Probably cus they don't have rpm).
+	main_data['fps'] = 0x968C44, [0x454, 0x278] #FPS Counter. Works without toggling the fps counter in-game
+	main_data['servertimer'] = 0x968C44, [0x454, 0x518, 0xC8] # Current time on server. Shows 0 if no server timer or offline.
 	setup_data = {}
-	setup_data['state'] = 0xD560CC, [0x0, 0x1C, 0x124] # 1 = Online menu and party play > on a local network. 2 = Loading map on server. 16 = Select account. 32 = Menu. 64 = Quit game confirmation. 128 = Select mood/mod of map and loading map offline. 256 = Editor. 512 = On a map. 1024 = Finish screen offline. 2048 Replay editor. 4096 = Select replay operation menu. 16384 = During "Please Wait" on server. 32768 = On a map on server. [0]
-	setup_data['altstate'] = 0xD5772C, [0x0, 0x1C, 0x124] # Same as above. Both of these addresses will not be able to see most of the states, this is intentional to prevent setup() from pre-firing.
+	setup_data['state'] = 0x9560CC, [0x0, 0x1C, 0x124] # 1 = Online menu and party play > on a local network. 2 = Loading map on server. 16 = Select account. 32 = Menu. 64 = Quit game confirmation. 128 = Select mood/mod of map and loading map offline. 256 = Editor. 512 = On a map. 1024 = Finish screen offline. 2048 Replay editor. 4096 = Select replay operation menu. 16384 = During "Please Wait" on server. 32768 = On a map on server. [0]
+	setup_data['altstate'] = 0x95772C, [0x0, 0x1C, 0x124] # Same as above. Both of these addresses will not be able to see most of the states, this is intentional to prevent setup() from pre-firing.
 	if data == "main_data":
 		return main_data
 	elif data == "setup_data":
@@ -121,24 +167,25 @@ def read_address_value(address, float):
 	ctypes.windll.kernel32.ReadProcessMemory(process_handle, address, ctypes.byref(address_value), ctypes.sizeof(address_value), None)
 	return address_value.value
 
-def get_final_addresses(base_address, offsets, alt):
+def get_final_addresses(base_address, offset_address, offsets, alt):
+	offset_address += base_address
 	if alt:
-		base_address += 0x1660
+		offset_address += 0x1660
 	if not offsets:
-		return base_address
+		return offset_address
 	for offset in offsets:
-		address_value = read_address_value(base_address, False)
-		base_address = address_value + offset
+		address_value = read_address_value(offset_address, False)
+		offset_address = address_value + offset
 		# print(hex(address_value).upper(), hex(offset).upper())
-	# print(hex(base_address).upper())
-	return base_address
+	# print(hex(offset_address).upper())
+	return offset_address
 
 #----------------------------------------------------------------------------------------------#
 
 #Initialize Variables
-serverhudservertimer = displayed_server_time = displayed_sourceservertime = displayed_fps = displayed_sourcefps = enabledservertimer = sourceservertimer = prefixservertimer = formatservertimer = enabledfps = sourcefps = prefixfps = current_setup_rate = prefixgear = prefixrpm = sourcerpm = sourcegear = displayed_sourcerpm = displayed_rpm = displayed_gear = displayed_sourcegear = enabledrpm = enabledgear = serverhudcp = displayed_respawns = enabledrespawns = sourcerespawns = prefixrespawns = displayed_sourcerespawns = disabled_displays = display_toggle = spectator = formatcptime = hudcptime = autoload = latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime_cptime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
-version = "v2.0"
-date = "09.06.2024"
+tmloader = serverhudservertimer = displayed_server_time = displayed_sourceservertime = displayed_fps = displayed_sourcefps = enabledservertimer = sourceservertimer = prefixservertimer = formatservertimer = enabledfps = sourcefps = prefixfps = current_setup_rate = prefixgear = prefixrpm = sourcerpm = sourcegear = displayed_sourcerpm = displayed_rpm = displayed_gear = displayed_sourcegear = enabledrpm = enabledgear = serverhudcp = displayed_respawns = enabledrespawns = sourcerespawns = prefixrespawns = displayed_sourcerespawns = disabled_displays = display_toggle = spectator = formatcptime = hudcptime = autoload = latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime_cptime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
+version = "v2.1"
+date = "26.06.2024"
 update_rate = 10
 setup_rate = 500
 displayed_checkpoint_time = new_update = 0
@@ -428,8 +475,8 @@ def updater():
 	
 	updater_timer_on = True
 
-def setup(*args): #Get PID > Alt client and In-Game check > Get final addresses.
-	global current_setup_rate, finish_reached, disabled_displays, final_setup_addresses, setup_rate, setuptimer, pid, process_handle, setupstage, setupinfo, manualpid, process_handle_pid, final_addresses, alt, updater_timer_on, update_rate
+def setup(*args): #Get PID > Get Base Address > Alt client and In-Game check > Get final addresses.
+	global tmloader, current_setup_rate, finish_reached, disabled_displays, final_setup_addresses, setup_rate, setuptimer, pid, process_handle, setupstage, setupinfo, manualpid, process_handle_pid, final_addresses, alt, updater_timer_on, update_rate
 	
 	if display_toggle:
 		if finish_reached:
@@ -476,6 +523,8 @@ def setup(*args): #Get PID > Alt client and In-Game check > Get final addresses.
 	if not manualpid:
 		pid = get_pid(process_name)
 	
+	base_address = get_base_address(pid)
+	
 	if process_handle and process_handle_pid != pid:
 		ctypes.windll.kernel32.CloseHandle(process_handle)
 		process_handle = None
@@ -489,11 +538,15 @@ def setup(*args): #Get PID > Alt client and In-Game check > Get final addresses.
 	
 	if process_handle:
 		for offsetName, (offsetBase, offsets) in address_offsets_setup_data.items():
-			final_setup_addresses.append(get_final_addresses(offsetBase, offsets, None))
+			final_setup_addresses.append(get_final_addresses(base_address, offsetBase, offsets, None))
 		
 		ingame_check = read_address_value(final_setup_addresses[0], False)
 		ingame_check_alt = read_address_value(final_setup_addresses[1], False)
 		# print(ingame_check, ingame_check_alt, final_setup_addresses)
+		if base_address == 0x400000:
+			tmloader = 0
+		else:
+			tmloader = 1
 		if ingame_check in (512, 16384, 32768):
 			ingame = True
 			alt = 0
@@ -515,12 +568,12 @@ def setup(*args): #Get PID > Alt client and In-Game check > Get final addresses.
 		if setupstage != 1:
 			print(setupinfo)
 			setupstage = 1
-		setupinfo = f"<font color=#ff8800><b>{setupinfo}</b></font>"
+		setupinfo = f"<font color=#ff5555><b>{setupinfo}</b></font>"
 		return
 	
 	if ingame:
 		for offsetName, (offsetBase, offsets) in address_offsets_data.items():
-			final_addresses.append(get_final_addresses(offsetBase, offsets, alt))
+			final_addresses.append(get_final_addresses(base_address, offsetBase, offsets, alt))
 		if setuptimer:
 			setuptimer = False
 			obs.timer_remove(setup)
@@ -668,7 +721,7 @@ def button_start_setup(props, prop, *settings):
 	return True
 
 def options_update(props, prop, *settings):
-	global serverhudservertimer, enabledservertimer, sourceservertimer, prefixservertimer, formatservertimer, enabledfps, sourcefps, prefixfps, setup_rate, sourcegear, sourcerpm, prefixgear, prefixrpm, enabledrpm, enabledgear, serverhudcp, enabledrespawns, sourcerespawns, prefixrespawns, display_toggle, formatcptime, hudcptime, latest_page, latest_direct, new_update, versionstatus, autosave, pre_prevent_first_load, prevent_first_load, sourcecp, prefixcp, seperatorcp, enabledcp, setupinfo, pid, manualpid, alt, setuptimer, enabledcptime, sourcecptime, cp0timedisplay, prefixcptime, update_rate
+	global tmloader, serverhudservertimer, enabledservertimer, sourceservertimer, prefixservertimer, formatservertimer, enabledfps, sourcefps, prefixfps, setup_rate, sourcegear, sourcerpm, prefixgear, prefixrpm, enabledrpm, enabledgear, serverhudcp, enabledrespawns, sourcerespawns, prefixrespawns, display_toggle, formatcptime, hudcptime, latest_page, latest_direct, new_update, versionstatus, autosave, pre_prevent_first_load, prevent_first_load, sourcecp, prefixcp, seperatorcp, enabledcp, setupinfo, pid, manualpid, alt, setuptimer, enabledcptime, sourcecptime, cp0timedisplay, prefixcptime, update_rate
 	
 	property_list = []
 	
@@ -736,6 +789,7 @@ def options_update(props, prop, *settings):
 	property_list.append(p_setup_start := obs.obs_properties_get(props, "setup_start"))
 	property_list.append(p_setup_status := obs.obs_properties_get(props, "setup_status"))
 	property_list.append(p_setup_altclient := obs.obs_properties_get(props, "setup_altclient"))
+	property_list.append(p_setup_tmloader := obs.obs_properties_get(props, "setup_tmloader"))
 	
 	property_list.append(p_setting_update_rate := obs.obs_properties_get(props, "setting_update_rate"))
 	property_list.append(p_setting_setup_rate := obs.obs_properties_get(props, "setting_setup_rate"))
@@ -855,6 +909,7 @@ def options_update(props, prop, *settings):
 		setup()
 	
 	obs.obs_data_set_string(settingscopy, "setup_altclient", str(bool(alt)))
+	obs.obs_data_set_string(settingscopy, "setup_tmloader", str(bool(tmloader)))
 	
 	obs.obs_data_set_string(settingscopy, "setup_status", setupinfo)
 	
@@ -972,6 +1027,7 @@ def options_update(props, prop, *settings):
 		obs.obs_property_set_visible(p_setup_manualpid, True)
 		obs.obs_property_set_visible(p_setup_status, True)
 		obs.obs_property_set_visible(p_setup_altclient, True)
+		obs.obs_property_set_visible(p_setup_tmloader, True)
 		if manualpid:
 			obs.obs_property_set_visible(p_setup_setpid, True)
 			obs.obs_property_set_visible(p_setup_setpidbutton, True)
@@ -1157,6 +1213,7 @@ def script_properties():
 	p = obs.obs_properties_add_text(props, "setup_status", "Status:", obs.OBS_TEXT_INFO)
 	p = obs.obs_properties_add_text(props, "setup_altclient", "Alt Client:", obs.OBS_TEXT_INFO)
 	obs.obs_property_set_long_description(p, "Usually a TmForever.exe from Steam.")
+	p = obs.obs_properties_add_text(props, "setup_tmloader", "TMLoader:", obs.OBS_TEXT_INFO)
 	#-Setup End-#
 	
 	#-Settings-#
