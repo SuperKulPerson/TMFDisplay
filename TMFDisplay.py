@@ -1,5 +1,5 @@
 '''
-Version: 2.1 / 27.06.2024
+Version: 2.2 / 11.07.2024
 Minimum Python version: 3.8
 Discord: tractorfan
 GitHub: https://github.com/SuperKulPerson/TMFDisplay
@@ -9,6 +9,12 @@ Performance issues? Try these tips:
 -Disable antialiasing in your text sources.
 -Change the font size in your text sources to something lower.
 -Change the update rate to something less frequent.
+
+Version 2.1 > 2.2 / 11.07.2024
+Added cp0 hiding for Respawn Counter.
+Fixed Checkpoint Counter not updating to the last checkpoint when collecting a checkpoint and finishing on the same tick.
+Checkpoint Timer source should now correctly go invisible instead of just displaying an empty string.
+The setting "Toggle display while not playing" is now set to True by default.
 
 Version 2.0 > 2.1 / 27.06.2024
 Fixed compatibility with TMLoader.
@@ -62,6 +68,10 @@ Added automatic max cp detection.
 
 Version 1.0.0 > 1.0.1
 Optimized average frame render time by only updating display when the checkpoint changes.
+
+Known bugs
+- Finishing on a 0 cp track will cause the Cp/Respawn counters to become stuck the next run. (setup() function and cp0 display setting issue.)
+- Sometimes the script will error with a "ValueError: cannot convert float NaN to integer" when read_address_value(). (Seems to happen when exiting an editor validation run before finishing, might be hard to reproduce.)
 '''
 
 import obspython as obs
@@ -183,9 +193,9 @@ def get_final_addresses(base_address, offset_address, offsets, alt):
 #----------------------------------------------------------------------------------------------#
 
 #Initialize Variables
-tmloader = serverhudservertimer = displayed_server_time = displayed_sourceservertime = displayed_fps = displayed_sourcefps = enabledservertimer = sourceservertimer = prefixservertimer = formatservertimer = enabledfps = sourcefps = prefixfps = current_setup_rate = prefixgear = prefixrpm = sourcerpm = sourcegear = displayed_sourcerpm = displayed_rpm = displayed_gear = displayed_sourcegear = enabledrpm = enabledgear = serverhudcp = displayed_respawns = enabledrespawns = sourcerespawns = prefixrespawns = displayed_sourcerespawns = disabled_displays = display_toggle = spectator = formatcptime = hudcptime = autoload = latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime_cptime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
-version = "v2.1"
-date = "27.06.2024"
+cp0respawndisplay = tmloader = serverhudservertimer = displayed_server_time = displayed_sourceservertime = displayed_fps = displayed_sourcefps = enabledservertimer = sourceservertimer = prefixservertimer = formatservertimer = enabledfps = sourcefps = prefixfps = current_setup_rate = prefixgear = prefixrpm = sourcerpm = sourcegear = displayed_sourcerpm = displayed_rpm = displayed_gear = displayed_sourcegear = enabledrpm = enabledgear = serverhudcp = displayed_respawns = enabledrespawns = sourcerespawns = prefixrespawns = displayed_sourcerespawns = disabled_displays = display_toggle = spectator = formatcptime = autoload = latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime_cptime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
+version = "v2.2"
+date = "11.07.2024"
 update_rate = 10
 setup_rate = 500
 displayed_checkpoint_time = new_update = 0
@@ -280,14 +290,19 @@ def format_time(mstime, format):
 def checkpoint_updater(current_checkpoint, current_max_checkpoint):
 	global displayed_checkpoint, displayed_max_checkpoint, displayed_sourcecp, finish_reached
 	
-	current_checkpoint = prefixcp + str(current_checkpoint) + seperatorcp + str(current_max_checkpoint - 1)
+	current_max_checkpoint -= 1
 	
-	if not finish_reached and (displayed_checkpoint != current_checkpoint or displayed_max_checkpoint != current_max_checkpoint or displayed_sourcecp != sourcecp):
-		
+	current_checkpoint = prefixcp + str(current_checkpoint) + seperatorcp + str(current_max_checkpoint)
+	
+	if displayed_checkpoint != current_checkpoint or displayed_max_checkpoint != current_max_checkpoint or displayed_sourcecp != sourcecp:
 		displayed_checkpoint = current_checkpoint
 		displayed_max_checkpoint = current_max_checkpoint
 		displayed_sourcecp = sourcecp
-		display(sourcecp, current_checkpoint, None)
+		
+		if not finish_reached:
+			display(sourcecp, current_checkpoint, None)
+		else:
+			display(sourcecp, prefixcp + str(current_max_checkpoint) + seperatorcp + str(current_max_checkpoint), None)
 
 def checkpoint_time_updater(current_mstime, current_checkpoint_time, current_checkpoint, current_max_checkpoint):
 	global formatcptime, finish_reached, displayed_sourcecptime, displayed_mstime_cptime, cp0timedisplay, displayed_checkpoint_time, prefixcptime
@@ -297,13 +312,13 @@ def checkpoint_time_updater(current_mstime, current_checkpoint_time, current_che
 			if cp0timedisplay:
 				display(sourcecptime, prefixcptime + cp0timedisplay, None)
 			else:
-				display(sourcecptime, " ", None)
+				display(sourcecptime, None, True)
 			displayed_mstime_cptime = cp0timedisplay
 		return
 	
 	if finish_reached:
 		if displayed_checkpoint_time != current_checkpoint_time:
-			current_mstime -= displayed_checkpoint_time
+			current_mstime -= read_address_value(final_addresses[3] + max(current_checkpoint - 2, 0) * 0x8, False)
 			displayed_checkpoint_time = current_checkpoint_time
 			display(sourcecptime, prefixcptime + format_time(current_mstime, formatcptime), None)
 		return
@@ -317,11 +332,18 @@ def checkpoint_time_updater(current_mstime, current_checkpoint_time, current_che
 		display(sourcecptime, prefixcptime + format_time(current_mstime, formatcptime), None)
 		return
 
-def respawn_updater(current_mstime, current_respawns):
-	global displayed_respawns, displayed_sourcerespawns, finish_reached
+def respawn_updater(current_respawns, current_checkpoint):
+	global displayed_respawns, displayed_sourcerespawns, finish_reached, cp0respawndisplay
 	
-	if current_mstime <= 0:
+	if current_checkpoint == 0:
 		current_respawns = 0
+		if cp0respawndisplay != displayed_respawns:
+			if cp0respawndisplay:
+				display(sourcerespawns, prefixrespawns + cp0respawndisplay, None)
+			else:
+				display(sourcerespawns, None, True)
+			displayed_respawns = cp0respawndisplay
+		return
 	
 	current_respawns = prefixrespawns + str(current_respawns)
 	
@@ -394,9 +416,9 @@ def updater():
 		disabled_displays = spectator
 		if enabledcp:
 			display(sourcecp, None, spectator)
-		if enabledcptime:
+		if enabledcptime and cp0timedisplay:
 			display(sourcecptime, None, spectator)
-		if enabledrespawns:
+		if enabledrespawns and cp0respawndisplay:
 			display(sourcerespawns, None, spectator)
 		if enabledgear:
 			display(sourcegear, None, spectator)
@@ -419,9 +441,9 @@ def updater():
 		display(sourceservertimer, None, None)
 		display(sourcecp, None, None)
 	
-	if enabledcptime or enabledrespawns:
+	if enabledcptime:
 		current_mstime = read_address_value(final_addresses[0], False)
-	if enabledcp or enabledcptime:
+	if enabledcp or enabledcptime or enabledrespawns:
 		current_checkpoint = read_address_value(final_addresses[1], False)
 	if enabledcp or enabledcptime:
 		current_max_checkpoint = read_address_value(final_addresses[2], False)
@@ -455,7 +477,7 @@ def updater():
 	if enabledcptime:
 		checkpoint_time_updater(current_mstime, current_checkpoint_time, current_checkpoint, current_max_checkpoint)
 	if enabledrespawns:
-		respawn_updater(current_mstime, current_respawns)
+		respawn_updater(current_respawns, current_checkpoint)
 	if enabledgear:
 		gear_updater(current_gear)
 	if enabledrpm:
@@ -642,7 +664,7 @@ def script_defaults(settings):
 	obs.obs_data_set_bool(settings, "enabledfps", False)
 	obs.obs_data_set_bool(settings, "setting_autosave", False)
 	obs.obs_data_set_bool(settings, "setting_autoload", False)
-	obs.obs_data_set_bool(settings, "setting_display_toggle", False)
+	obs.obs_data_set_bool(settings, "setting_display_toggle", True)
 	obs.obs_data_set_string(settings, "sourcefps", "No Source")
 	obs.obs_data_set_string(settings, "prefixfps", "FPS: ")
 	obs.obs_data_set_string(settings, "sourceservertimer", "No Source")
@@ -653,6 +675,7 @@ def script_defaults(settings):
 	obs.obs_data_set_string(settings, "prefixrpm", "RPM: ")
 	obs.obs_data_set_string(settings, "sourcerespawns", "No Source")
 	obs.obs_data_set_string(settings, "prefixrespawns", "Respawns: ")
+	obs.obs_data_set_string(settings, "cp0respawndisplay", "")
 	obs.obs_data_set_string(settings, "cp0timedisplay", "")
 	obs.obs_data_set_string(settings, "options", "Status")
 	obs.obs_data_set_string(settings, "sourcecp", "No Source")
@@ -721,7 +744,7 @@ def button_start_setup(props, prop, *settings):
 	return True
 
 def options_update(props, prop, *settings):
-	global tmloader, serverhudservertimer, enabledservertimer, sourceservertimer, prefixservertimer, formatservertimer, enabledfps, sourcefps, prefixfps, setup_rate, sourcegear, sourcerpm, prefixgear, prefixrpm, enabledrpm, enabledgear, serverhudcp, enabledrespawns, sourcerespawns, prefixrespawns, display_toggle, formatcptime, hudcptime, latest_page, latest_direct, new_update, versionstatus, autosave, pre_prevent_first_load, prevent_first_load, sourcecp, prefixcp, seperatorcp, enabledcp, setupinfo, pid, manualpid, alt, setuptimer, enabledcptime, sourcecptime, cp0timedisplay, prefixcptime, update_rate
+	global cp0respawndisplay, tmloader, serverhudservertimer, enabledservertimer, sourceservertimer, prefixservertimer, formatservertimer, enabledfps, sourcefps, prefixfps, setup_rate, sourcegear, sourcerpm, prefixgear, prefixrpm, enabledrpm, enabledgear, serverhudcp, enabledrespawns, sourcerespawns, prefixrespawns, display_toggle, formatcptime, latest_page, latest_direct, new_update, versionstatus, autosave, pre_prevent_first_load, prevent_first_load, sourcecp, prefixcp, seperatorcp, enabledcp, setupinfo, pid, manualpid, alt, setuptimer, enabledcptime, sourcecptime, cp0timedisplay, prefixcptime, update_rate
 	
 	property_list = []
 	
@@ -754,6 +777,7 @@ def options_update(props, prop, *settings):
 	property_list.append(p_enabledrespawns := obs.obs_properties_get(props, "enabledrespawns"))
 	property_list.append(p_sourcerespawns := obs.obs_properties_get(props, "sourcerespawns"))
 	property_list.append(p_prefixrespawns := obs.obs_properties_get(props, "prefixrespawns"))
+	property_list.append(p_cp0respawndisplay := obs.obs_properties_get(props, "cp0respawndisplay"))
 	property_list.append(p_examplesourcerespawns := obs.obs_properties_get(props, "examplesourcerespawns"))
 	property_list.append(p_examplerespawns := obs.obs_properties_get(props, "examplerespawns"))
 	
@@ -852,6 +876,7 @@ def options_update(props, prop, *settings):
 	enabledrespawns = obs.obs_data_get_bool(settingscopy, "enabledrespawns")
 	sourcerespawns = obs.obs_data_get_string(settingscopy, "sourcerespawns")
 	prefixrespawns = obs.obs_data_get_string(settingscopy, "prefixrespawns")
+	cp0respawndisplay = obs.obs_data_get_string(settingscopy, "cp0respawndisplay")
 	
 	if not sourcerespawns:
 		sourcerespawns = "No Source"
@@ -989,6 +1014,7 @@ def options_update(props, prop, *settings):
 		obs.obs_property_set_visible(p_enabledrespawns, True)
 		obs.obs_property_set_visible(p_sourcerespawns, True)
 		obs.obs_property_set_visible(p_prefixrespawns, True)
+		obs.obs_property_set_visible(p_cp0respawndisplay, True)
 		obs.obs_property_set_visible(p_examplesourcerespawns, True)
 		obs.obs_property_set_visible(p_examplerespawns, True)
 		
@@ -1045,6 +1071,8 @@ def options_update(props, prop, *settings):
 		obs.obs_property_set_visible(p_setting_check_version, True)
 		if new_update >= 1:
 			obs.obs_property_set_visible(p_setting_version, True)
+		if new_update >= 2:
+			obs.obs_property_set_visible(p_setting_check_version, False)
 		if new_update == 3:
 			obs.obs_property_set_visible(p_setting_download_direct, True)
 			obs.obs_property_button_set_url(p_setting_download_direct, latest_direct)
@@ -1134,6 +1162,10 @@ def script_properties():
 	obs.obs_property_set_modified_callback(p, options_update)
 	
 	p = obs.obs_properties_add_text(props, "prefixrespawns", "Prefix", obs.OBS_TEXT_DEFAULT)
+	obs.obs_property_set_modified_callback(p, options_update)
+	
+	p = obs.obs_properties_add_text(props, "cp0respawndisplay", "CP 0", obs.OBS_TEXT_DEFAULT)
+	obs.obs_property_set_long_description(p, "What to display on Checkpoint 0.\nEmpty: Invisible")
 	obs.obs_property_set_modified_callback(p, options_update)
 	
 	p = obs.obs_properties_add_text(props, "examplesourcerespawns", "Source:", obs.OBS_TEXT_INFO)
