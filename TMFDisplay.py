@@ -1,5 +1,5 @@
 '''
-Version: 2.2 / 11.07.2024
+Version: 2.3 / 13.07.2024
 Minimum Python version: 3.8
 Discord: tractorfan
 GitHub: https://github.com/SuperKulPerson/TMFDisplay
@@ -9,6 +9,10 @@ Performance issues? Try these tips:
 -Disable antialiasing in your text sources.
 -Change the font size in your text sources to something lower.
 -Change the update rate to something less frequent.
+
+Version 2.2 > 2.3 / 13.07.2024
+Added "Convert timer" setting that will automatically convert timers from "00:00" to "0:00:00" when above 60 minutes. Set to True by default.
+Made hour formatting cleaner.
 
 Version 2.1 > 2.2 / 11.07.2024
 Added cp0 hiding for Respawn Counter.
@@ -193,9 +197,9 @@ def get_final_addresses(base_address, offset_address, offsets, alt):
 #----------------------------------------------------------------------------------------------#
 
 #Initialize Variables
-cp0respawndisplay = tmloader = serverhudservertimer = displayed_server_time = displayed_sourceservertime = displayed_fps = displayed_sourcefps = enabledservertimer = sourceservertimer = prefixservertimer = formatservertimer = enabledfps = sourcefps = prefixfps = current_setup_rate = prefixgear = prefixrpm = sourcerpm = sourcegear = displayed_sourcerpm = displayed_rpm = displayed_gear = displayed_sourcegear = enabledrpm = enabledgear = serverhudcp = displayed_respawns = enabledrespawns = sourcerespawns = prefixrespawns = displayed_sourcerespawns = disabled_displays = display_toggle = spectator = formatcptime = autoload = latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime_cptime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
-version = "v2.2"
-date = "11.07.2024"
+convert_timer = cp0respawndisplay = tmloader = serverhudservertimer = displayed_server_time = displayed_sourceservertime = displayed_fps = displayed_sourcefps = enabledservertimer = sourceservertimer = prefixservertimer = formatservertimer = enabledfps = sourcefps = prefixfps = current_setup_rate = prefixgear = prefixrpm = sourcerpm = sourcegear = displayed_sourcerpm = displayed_rpm = displayed_gear = displayed_sourcegear = enabledrpm = enabledgear = serverhudcp = displayed_respawns = enabledrespawns = sourcerespawns = prefixrespawns = displayed_sourcerespawns = disabled_displays = display_toggle = spectator = formatcptime = autoload = latest_page = latest_version_date = latest_direct = versionstatus = latest_version = latest_date = autosave = current_update_rate = updater_timer_on = cp0_cptime_display = displayed_mstime_cptime = sourcecp = displayed_checkpoint = displayed_max_checkpoint = displayed_sourcecp = prefixcp = process_handle = enabledcp = finish_reached = setuptimer = settingscopy = setupstage = setupinfo = manualpid = process_handle_pid = pid = pre_prevent_first_load = prevent_first_load = alt = enabledcptime = sourcecptime = displayed_sourcecptime = None
+version = "v2.3"
+date = "13.07.2024"
 update_rate = 10
 setup_rate = 500
 displayed_checkpoint_time = new_update = 0
@@ -266,17 +270,19 @@ def display(sourcename, displayvalue, disable):
 	obs.obs_source_release(source)
 
 def format_time(mstime, format):
+	if convert_timer and format <= 1 and mstime >= 3600000:
+		format += 2
 	if format == 3:
 		hours = mstime // 3600000
 		minutes = (mstime // 60000) % 60
 		seconds = (mstime // 1000) % 60
 		centiseconds = (mstime % 1000) // 10
-		return "%02d:%02d:%02d.%02d" % (hours, minutes, seconds, centiseconds)
+		return "%d:%02d:%02d.%02d" % (hours, minutes, seconds, centiseconds)
 	elif format == 2:
 		hours = mstime // 3600000
 		minutes = (mstime // 60000) % 60
 		seconds = (mstime // 1000) % 60
-		return "%02d:%02d:%02d" % (hours, minutes, seconds)
+		return "%d:%02d:%02d" % (hours, minutes, seconds)
 	elif format == 1:
 		total_minutes = mstime // 60000
 		seconds = (mstime // 1000) % 60
@@ -665,6 +671,7 @@ def script_defaults(settings):
 	obs.obs_data_set_bool(settings, "setting_autosave", False)
 	obs.obs_data_set_bool(settings, "setting_autoload", False)
 	obs.obs_data_set_bool(settings, "setting_display_toggle", True)
+	obs.obs_data_set_bool(settings, "convert_timer", True)
 	obs.obs_data_set_string(settings, "sourcefps", "No Source")
 	obs.obs_data_set_string(settings, "prefixfps", "FPS: ")
 	obs.obs_data_set_string(settings, "sourceservertimer", "No Source")
@@ -744,7 +751,7 @@ def button_start_setup(props, prop, *settings):
 	return True
 
 def options_update(props, prop, *settings):
-	global cp0respawndisplay, tmloader, serverhudservertimer, enabledservertimer, sourceservertimer, prefixservertimer, formatservertimer, enabledfps, sourcefps, prefixfps, setup_rate, sourcegear, sourcerpm, prefixgear, prefixrpm, enabledrpm, enabledgear, serverhudcp, enabledrespawns, sourcerespawns, prefixrespawns, display_toggle, formatcptime, latest_page, latest_direct, new_update, versionstatus, autosave, pre_prevent_first_load, prevent_first_load, sourcecp, prefixcp, seperatorcp, enabledcp, setupinfo, pid, manualpid, alt, setuptimer, enabledcptime, sourcecptime, cp0timedisplay, prefixcptime, update_rate
+	global convert_timer, cp0respawndisplay, tmloader, serverhudservertimer, enabledservertimer, sourceservertimer, prefixservertimer, formatservertimer, enabledfps, sourcefps, prefixfps, setup_rate, sourcegear, sourcerpm, prefixgear, prefixrpm, enabledrpm, enabledgear, serverhudcp, enabledrespawns, sourcerespawns, prefixrespawns, display_toggle, formatcptime, latest_page, latest_direct, new_update, versionstatus, autosave, pre_prevent_first_load, prevent_first_load, sourcecp, prefixcp, seperatorcp, enabledcp, setupinfo, pid, manualpid, alt, setuptimer, enabledcptime, sourcecptime, cp0timedisplay, prefixcptime, update_rate
 	
 	property_list = []
 	
@@ -822,6 +829,7 @@ def options_update(props, prop, *settings):
 	property_list.append(p_setting_autosave := obs.obs_properties_get(props, "setting_autosave"))
 	property_list.append(p_setting_autoload := obs.obs_properties_get(props, "setting_autoload"))
 	property_list.append(p_setting_display_toggle := obs.obs_properties_get(props, "setting_display_toggle"))
+	property_list.append(p_convert_timer := obs.obs_properties_get(props, "convert_timer"))
 	property_list.append(p_setting_check_version := obs.obs_properties_get(props, "setting_check_version"))
 	property_list.append(p_setting_version := obs.obs_properties_get(props, "setting_version"))
 	property_list.append(p_setting_download_direct := obs.obs_properties_get(props, "setting_download_direct"))
@@ -950,8 +958,8 @@ def options_update(props, prop, *settings):
 	autosave = obs.obs_data_get_bool(settingscopy, "setting_autosave")
 	autoload = obs.obs_data_get_bool(settingscopy, "setting_autoload")
 	display_toggle = obs.obs_data_get_bool(settingscopy, "setting_display_toggle")
+	convert_timer = obs.obs_data_get_bool(settingscopy, "convert_timer")
 	obs.obs_data_set_string(settingscopy, "setting_version", versionstatus)
-	
 	#-Settings End-#
 	
 	#-Status-#
@@ -1068,6 +1076,7 @@ def options_update(props, prop, *settings):
 		obs.obs_property_set_visible(p_setting_autosave, True)
 		obs.obs_property_set_visible(p_setting_autoload, True)
 		obs.obs_property_set_visible(p_setting_display_toggle, True)
+		obs.obs_property_set_visible(p_convert_timer, True)
 		obs.obs_property_set_visible(p_setting_check_version, True)
 		if new_update >= 1:
 			obs.obs_property_set_visible(p_setting_version, True)
@@ -1144,8 +1153,8 @@ def script_properties():
 	obs.obs_property_set_modified_callback(p, options_update)
 	
 	p = obs.obs_properties_add_list(props, "formatcptime", "Timer Format", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_INT)
-	obs.obs_property_list_add_int(p, "01:23:45.67", 3)
-	obs.obs_property_list_add_int(p, "01:23:45", 2)
+	obs.obs_property_list_add_int(p, "1:23:45.67", 3)
+	obs.obs_property_list_add_int(p, "1:23:45", 2)
 	obs.obs_property_list_add_int(p, "83:45.67", 1)
 	obs.obs_property_list_add_int(p, "83:45", 0)
 	
@@ -1216,8 +1225,8 @@ def script_properties():
 	obs.obs_property_set_modified_callback(p, options_update)
 	
 	p = obs.obs_properties_add_list(props, "formatservertimer", "Timer Format", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_INT)
-	obs.obs_property_list_add_int(p, "01:23:45.67", 3)
-	obs.obs_property_list_add_int(p, "01:23:45", 2)
+	obs.obs_property_list_add_int(p, "1:23:45.67", 3)
+	obs.obs_property_list_add_int(p, "1:23:45", 2)
 	obs.obs_property_list_add_int(p, "83:45.67", 1)
 	obs.obs_property_list_add_int(p, "83:45", 0)
 	obs.obs_property_set_modified_callback(p, options_update)
@@ -1272,6 +1281,10 @@ def script_properties():
 	
 	p = obs.obs_properties_add_bool(props, "setting_display_toggle", "Toggle display while not playing")
 	obs.obs_property_set_long_description(p, "Makes every text source invisible while spectating, loading, in menu, etc.\nException: Server Timer and FPS counter will show while spectating.")
+	obs.obs_property_set_modified_callback(p, options_update)
+	
+	p = obs.obs_properties_add_bool(props, "convert_timer", "Convert timer")
+	obs.obs_property_set_long_description(p, "Automatically converts a short timer format when it goes above 60 minutes. \n64:35.77 > 01:04:35.77\n64:35 > 01:04:35")
 	obs.obs_property_set_modified_callback(p, options_update)
 	
 	p = obs.obs_properties_add_button(props, "setting_check_version", "Check for update", button)
