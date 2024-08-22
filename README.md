@@ -6,17 +6,21 @@ TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://githu
 ## Requirements
 - Windows.
 - Python 3.8 or newer.
+- Latest OBS.
 
 ## Install
-- In OBS, `Tools` > `Scripts` > `Python Settings` set your Python folder. The directory should look something like this: `C:/Users/User/AppData/Local/Programs/Python/Python312`
-- Download the latest script, press the + button in `Tools` > `Scripts`, move the script there and load it.
+1. In OBS, `Tools` > `Scripts` > `Python Settings` set your Python folder. The directory should look something like this: `C:/Users/User/AppData/Local/Programs/Python/Python312`
+2. Download the latest script, place it in `C:\Program Files\obs-studio\data\obs-plugins\frontend-tools\scripts`
+3. In OBS, `Tools` > `Scripts` press the + button, and open the script.
 
 ## Usage
-- Before you load the script, you should create your text sources.
-- For the script to function, it must first setup. Simply follow what the setup status says, and click the refresh button for the next step. Alternatively, open the script log for live updates.
-- If the automatic setup fails or picks the wrong game, select the `Setup` option, and set the PID of the game you want to setup. The script will always pick the first opened game to setup.
-- Once the setup is complete, select what features you want to enable, and save your settings.
+- To display a checkpoint counter, Create a new text source in your scene and name it anything. Then, in the script, click the options dropdown and select `Checkpoint Counter`, enable it, and select the text source you made earlier. Repeat for anything else you want to display.
+- To save your settings, click the options dropdown and select `Settings`, there you can save your settings and turn on auto save/load.
 - Important about settings: If saving settings fail, it is usually a folder permission problem. Simply create an empty "MainSettings.json" file and place it in the scripts folder. Alternatively, you can change the folder permissions of the script folder.
+
+## Troubleshoot
+- If it says `No properties available` when opening the script, make sure OBS and Python is up to date and that a python install path is selected in the `Python Settings` tab.
+- If the script picks the wrong client, select the `Setup` option, and set the PID of the game you want to setup. The script will always pick the first opened game to setup.
 
 ## Current Features
 - Checkpoint counter.
