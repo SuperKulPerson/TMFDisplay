@@ -19,7 +19,7 @@ TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://githu
 - Important about settings: If saving settings fail, it is usually a folder permission problem. Simply create an empty "MainSettings.json" file and place it in the scripts folder. Alternatively, you can change the folder permissions of the script folder.
 
 ## Troubleshoot
-- If it says `No properties available` when opening the script, make sure OBS and Python is up to date and that a python install path is selected in the `Python Settings` tab.
+- If it says `No properties available` when opening the script, make sure OBS and Python is up to date and that a Python install path is selected in the `Python Settings` tab.
 - If the script picks the wrong client, select the `Setup` option, and set the PID of the game you want to setup. The script will always pick the first opened game to setup.
 
 ## Current Features
