@@ -28,3 +28,18 @@ TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://githu
 
 ## Future
 The next big version (3.0) will most likely be a rewrite. The current script is an unplanned mess, which makes it difficult to add new features. I will still do bugfixes and add some additions if there is any demand.
+
+# TMFDisplay Inputs
+TMFDisplay Inputs is a seperate lua script i made to learn obs sources and some graphics. It works without setting up any hotkeys, it can display keyboard and pad inputs, and you can make your own input textures. The script can be found in the "TMFDisplay Inputs" folder.
+
+![input example](https://github.com/user-attachments/assets/58528bac-69ca-4f6c-b5da-77dbb07b0bd5)
+
+### Advantages
+- Easy to set up.
+- Works with pad and keyboard inputs.
+- No hotkeys needed, instead it reads the inputs from the game.
+- Customizable textures.
+
+### Disadvantages
+- Only reads from one client at a time. (It is possible to duplicate the file and change the "input.id" variable to fix this.)
+- Only works on TMForever games.
