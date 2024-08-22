@@ -41,5 +41,5 @@ TMFDisplay Inputs is a seperate lua script i made to learn obs sources and some 
 - Customizable textures.
 
 ### Disadvantages
-- Only reads from one client at a time. (It is possible to duplicate the file and change the "input.id" variable to fix this.)
+- Only reads from one client at a time. (It is possible to duplicate the script and change the "input.id" variable to fix this.)
 - Only works on TMForever games.
