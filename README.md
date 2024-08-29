@@ -14,13 +14,13 @@ TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://githu
 3. In OBS, `Tools` > `Scripts` press the + button, and open the script.
 
 ## Usage
-- To display a checkpoint counter, Create a new text source in your scene and name it anything. Then, in the script, click the options dropdown and select `Checkpoint Counter`, enable it, and select the text source you made earlier. Repeat for anything else you want to display.
+- To display a checkpoint counter, create a new text source in your scene and name it anything. In the script, click the options dropdown and select `Checkpoint Counter`, enable it, and select the text source you made earlier. Repeat for anything else you want to display.
 - To save your settings, click the options dropdown and select `Settings`, there you can save your settings and turn on auto-save/load.
 - Important about settings: If saving settings fail, it is usually a folder permission problem. Simply create an empty "MainSettings.json" file and place it in the scripts folder. Alternatively, you can change the folder permissions of the script folder.
 
 ## Troubleshoot
 - If it says `No properties available` when opening the script, make sure OBS and Python is up to date and that a Python install path is selected in the `Python Settings` tab.
-- If the script picks the wrong client, select the `Setup` option, set the new manual PID, and click Start Setup. The script will always pick the first opened game to automatically setup.
+- If the script picks the wrong client, select the `Setup` option, set the new manual PID, and click Start Setup. The script will automatically always pick the first opened game.
 
 ## Current Features
 - Checkpoint counter.
