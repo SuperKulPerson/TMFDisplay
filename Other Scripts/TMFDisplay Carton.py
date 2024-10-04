@@ -5,7 +5,9 @@ Discord: tractorfan
 GitHub: https://github.com/SuperKulPerson/TMFDisplay
 '''
 
-# MINOR TODO: Fix respawn being added on script refresh
+# ! - WARNING - !   THIS SCRIPT IS NOT WELL TESTED AND MAY BE BUGGY. DO NOT PLAN TO USE THIS SCRIPT ONLINE
+
+# MINOR TODO: Fix respawn being added on script refresh (i think it was fixed)
 
 import obspython as obs # type: ignore
 import ctypes
