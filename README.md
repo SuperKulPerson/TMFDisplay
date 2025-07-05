@@ -5,7 +5,7 @@ TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://githu
 
 ## Requirements
 - Windows.
-- Python 3.8 or newer.
+- Python 3.8 to 3.12. OBS does not support Python 3.13 yet.
 - Latest OBS.
 
 ## Install
@@ -25,13 +25,14 @@ TMFDisplay is a [Python](https://www.python.org/) script for [OBS](https://githu
 ## Current Features
 - Checkpoint counter.
 - Checkpoint timer.
+- Predict finish time.
 - Respawn counter.
 - Gear/RPM.
 - FPS.
-- Server Timer.
+- Server timer.
 
 ## Future
-The next big version (3.0) will most likely be a rewrite. The current script is an unplanned mess, which makes it difficult to add new features. I will still do bugfixes and add some additions if there is any demand.
+The next big version (3.0) will most likely be a rewrite. The current script is an unplanned mess, which makes it difficult to add new features. I will still do bugfixes and add some features if there is any demand.
 
 # TMFDisplay Inputs
 TMFDisplay Inputs is a separate lua script I made to learn obs sources and some graphics. It works without setting up any hotkeys, it can display keyboard and pad inputs, and you can make your own input textures. The script can be found in the "TMFDisplay Inputs" folder.
